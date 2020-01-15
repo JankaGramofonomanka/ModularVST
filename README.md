@@ -18,8 +18,11 @@ in {DIRECTORY} create a folder called 'my_plugins'
 enter {DIRECTORY}/my_plugins and create a file 'CMakeLists.txt' and add to it the following line:
 > add_subdirectory(ModularVST)
 
+Copy this repository to {DIRECTORY}/my_plugins/ModularVST:
+> git clone https://github.com/JankaGramofonomanka/ModularVST.git
+
 Now you can build the plugin, to do this, go back to {DIRECTORY} and follow these insstructions:
 https://github.com/steinbergmedia/vst3sdk/blob/master/README.md (section 'How to build VST3')
 (of course do not clone the repository again)
 
-The plugin will be created in the folder {DIRECTORY}/build/VST3/Debug
+The plugin (called Synth.vst3) will be created in the folder {DIRECTORY}/build/VST3/Debug
