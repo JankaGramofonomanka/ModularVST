@@ -27,11 +27,15 @@ float Camertone::output() {
     return sin(phase);
 }
 
+
+
 //-----------------------------------------------------------------------------
 float NullModule::output() {
     return 0;
 }
 //-----------------------------------------------------------------------------
+
+
 
 //-----------------------------------------------------------------------------
 Oscillator::Oscillator() : period(2 * M_PI) {
@@ -65,6 +69,8 @@ float Oscillator::output() {
     return sin(phase);
 }
 
+
+
 //-----------------------------------------------------------------------------
 OneInputOneOutputModule::OneInputOneOutputModule() {
     input = (CVModule*) &NULL_MODULE;
@@ -73,6 +79,10 @@ OneInputOneOutputModule::OneInputOneOutputModule() {
 float OneInputOneOutputModule::output() { return input->output(); }
 
 void OneInputOneOutputModule::setInput(CVModule* _input) { input = _input; }
+
+bool OneInputOneOutputModule::isOn() { return input->isOn(); }
+
+
 
 //-----------------------------------------------------------------------------
 Amplifier::Amplifier() {
@@ -88,7 +98,9 @@ float Amplifier::output() {
 
 void Amplifier::setVolume(Vst::ParamValue* _volume) { volume = *_volume; }
 
-bool Amplifier::isOn() { return volume > 0; }
+bool Amplifier::isOn() { return volume > 0 && input->isOn(); }
+
+
 
 //-----------------------------------------------------------------------------
 ModOnlyAmp::ModOnlyAmp() {
@@ -110,6 +122,8 @@ void ModOnlyAmp::setModulator(CVModule* mod) {
     modulator = mod;
 }
 
+
+
 //-----------------------------------------------------------------------------
 bool ModAmp::isOn() {
     return volume > 0 && (modulator->isOn() || modulator == &NULL_MODULE);
@@ -117,11 +131,12 @@ bool ModAmp::isOn() {
 
 float ModAmp::output() {
     if (isOn()) {
-        float modOut = modulator->output();
-        return volume * modOut * input->output();    
+        return volume * modulator->output() * input->output();    
     }
     return 0;
 }
+
+
 
 //-----------------------------------------------------------------------------
 float Gate::output() { return on; }
@@ -132,11 +147,18 @@ void Gate::press() { on = true; }
 
 void Gate::release() { on = false; }
 
+
+
 //-----------------------------------------------------------------------------
 SmoothGate::SmoothGate() {
     value = 0;
     phase = 0;
     increment = 0.005;
+}
+
+void SmoothGate::setSampleRate(Vst::SampleRate* _sampleRate) {
+    sampleRate = *_sampleRate;
+    increment = 200 / sampleRate;
 }
 
 bool SmoothGate::isOn() { return phase != 0; }
@@ -175,9 +197,117 @@ float SmoothGate::output() {
     return value;
 }
 
+
+
+//-----------------------------------------------------------------------------
+LinearADSR::LinearADSR() {
+    value = 0;
+    phase = 0;
+}
+
+void LinearADSR::setSampleRate(Vst::SampleRate* _sampleRate) {
+    sampleRate = *_sampleRate;
+    Vst::ParamValue val = 0.005;
+    setAttack(&val);
+    setRelease(&val);
+    setDecay(&val);
+    val = 1;
+    setSustain(&val);
+}
+
+
+
+void LinearADSR::setAttackIncrement() {
+    attackIncrement = (1 - value) / (attackLevel * sampleRate);
+}
+
+void LinearADSR::setDecayIncrement() {
+    decayIncrement = (sustainLevel - 1) / (decayLevel * sampleRate);
+}
+
+void LinearADSR::setReleaseIncrement() {
+    releaseIncrement = -value / (releaseLevel * sampleRate);
+}
+
+
+
+void LinearADSR::setAttack(Vst::ParamValue* _value) {
+    attackLevel = *_value;
+    setAttackIncrement();
+}
+
+void LinearADSR::setDecay(Vst::ParamValue* _value) {
+    decayLevel = *_value;
+    setDecayIncrement();
+}
+
+void LinearADSR::setSustain(Vst::ParamValue* _value) {
+    sustainLevel = *_value;
+    setDecayIncrement();
+}
+
+void LinearADSR::setRelease(Vst::ParamValue* _value) {
+    releaseLevel = *_value;
+    setReleaseIncrement();
+}
+
+
+
+bool LinearADSR::isOn() { return phase != 0; }
+
+void LinearADSR::press() { phase = 1; }
+void LinearADSR::release() {
+    phase = 4;
+    setReleaseIncrement();
+}
+
+float LinearADSR::output() {
+    switch (phase) 
+    {
+    case 0:
+        //envelope is off
+        break;
+    case 1:
+        //Attack
+        if (value >= 1) {
+            phase++;
+            value = 1;
+            break;
+        }
+        value += attackIncrement;
+        break;
+    case 2:
+        //Decay
+        if (value <= sustainLevel) {
+            phase++;
+            value = sustainLevel;
+            break;
+        }
+        value += decayIncrement;    //the increment is less than 0
+        break;
+    case 3:
+        //Sustain
+        return sustainLevel;
+        break;
+    case 4:
+        //Release
+        if (value <= 0) {
+            phase = 0;
+            value = 0;
+            break;
+        }
+        value += releaseIncrement;    //the increment is less than 0
+        break;
+    }
+    return value;
+}
+
+
+
 //-----------------------------------------------------------------------------
 Mixer::Mixer() {
     numInputs = 0;
+    gain = 1;
 }
 
 float Mixer::output() {
@@ -197,7 +327,12 @@ void Mixer::addInput(CVModule* input) {
     gain = 1.0 / numInputs; 
 }
 
-void Mixer::clear() { inputs.clear(); }
+void Mixer::clear() {
+    inputs.clear();
+    numInputs = 0;
+}
+
+
 
 //-----------------------------------------------------------------------------
 FMOsc::FMOsc() {
@@ -212,6 +347,8 @@ float FMOsc::output() {
 void FMOsc::setModulator(CVModule* mod) {
     modulator = mod;
 }
+
+
 
 //-----------------------------------------------------------------------------
 FMOperator::FMOperator() {
@@ -238,7 +375,7 @@ void FMOperator::addModulator(CVModule* mod) { mixer.addInput(mod); }
 
 void FMOperator::setVolume(Vst::ParamValue* volume) { amp.setVolume(volume); }
 
-Triggerable* FMOperator::getEnvelopeAddress() { return &envelope; }
+LinearADSR* FMOperator::getEnvelopeAddress() { return &envelope; }
 
 float FMOperator::output() { return amp.output(); }
 

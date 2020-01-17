@@ -92,6 +92,8 @@ public:
     virtual float output();
 
     virtual void setInput(CVModule* _input);
+
+    virtual bool isOn();
 };
 
 //-----------------------------------------------------------------------------
@@ -176,12 +178,52 @@ class SmoothGate : public Triggerable
     float increment;
 public:
     SmoothGate();
+    virtual void setSampleRate(Vst::SampleRate* _sampleRate);
     virtual float output();
 
     virtual bool isOn();
 
     virtual void press();
     virtual void release();
+};
+
+//-----------------------------------------------------------------------------
+/** A simple ADSR envelope generator */
+//-----------------------------------------------------------------------------
+class LinearADSR : public Triggerable
+{
+    float value;
+    int phase;
+    
+    //parameters
+    float attackLevel;
+    float decayLevel;
+    float sustainLevel;
+    float releaseLevel;
+
+    //increments
+    float attackIncrement;
+    float decayIncrement;
+    float releaseIncrement;
+
+    virtual void setAttackIncrement();
+    virtual void setDecayIncrement();
+    virtual void setReleaseIncrement();
+
+public:
+    LinearADSR();
+    virtual void setSampleRate(Vst::SampleRate* _sampleRate);
+    virtual float output();
+    
+    virtual bool isOn();
+
+    virtual void press();
+    virtual void release();
+
+    virtual void setAttack(Vst::ParamValue* _value);
+    virtual void setDecay(Vst::ParamValue* _value);
+    virtual void setSustain(Vst::ParamValue* _value);
+    virtual void setRelease(Vst::ParamValue* _value);
 };
 
 //-----------------------------------------------------------------------------
@@ -223,7 +265,7 @@ class FMOperator : public Oscillator
     FMOsc osc;
     Mixer mixer;
     ModAmp amp;
-    Gate envelope;
+    LinearADSR envelope;
 public:
     FMOperator();
     virtual void setSampleRate(Vst::SampleRate* _sampleRate);
@@ -237,7 +279,7 @@ public:
 
     void addModulator(CVModule* mod);
     void setVolume(Vst::ParamValue* volume);
-    Triggerable* getEnvelopeAddress();
+    LinearADSR* getEnvelopeAddress();
 };
 
 } //namespace Synth

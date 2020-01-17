@@ -79,9 +79,9 @@ protected:
 
 	FMOperator osc;
 	FMOperator osc2;
-	//Mixer mixer;
-	ModAmp amp;
-	SmoothGate gate;
+	Mixer mixer;
+	Amplifier amp;
+	//SmoothGate gate;
 	LastMonoKeyboard keyboard;
 };
 

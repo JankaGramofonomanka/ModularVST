@@ -93,8 +93,9 @@ tresult PLUGIN_API PlugProcessor::setupProcessing (Vst::ProcessSetup& setup)
 	sampleRate = setup.sampleRate;
 	osc.setSampleRate(&sampleRate);
 	osc2.setSampleRate(&sampleRate);
-	gate.setSampleRate(&sampleRate);
-
+	//gate.setSampleRate(&sampleRate);
+	mixer.setSampleRate(&sampleRate);
+	amp.setSampleRate(&sampleRate);
 
 	return AudioEffect::setupProcessing (setup);
 }
@@ -109,25 +110,26 @@ tresult PLUGIN_API PlugProcessor::setActive (TBool state)
 
 		keyboard.addPitchReceiver(&osc);
 		keyboard.addPitchReceiver(&osc2);
-		keyboard.addGateReceiver(&gate);
+		//keyboard.addGateReceiver(&gate);
 		keyboard.addGateReceiver(osc.getEnvelopeAddress());
 		keyboard.addGateReceiver(osc2.getEnvelopeAddress());
 
 		//mixer.addInput(&osc);
-		//mixer.addInput(&osc2);
+		mixer.addInput(&osc2);
 
-		amp.setInput(&osc);
-		amp.setModulator(&gate);
+		amp.setInput(&mixer);
+		//amp.setModulator(&gate);
 
-		//osc.addModulator(&osc2);
+		
+		osc2.addModulator(&osc);
 	}
 	else // Release
 	{
 		osc.clear();
 		osc2.clear();
-		//mixer.clear();
+		mixer.clear();
+		//gate.clear();
 		amp.clear();
-		gate.clear();
 		keyboard.clear();
 		
 		// Free Memory if still allocated
@@ -157,7 +159,9 @@ void PlugProcessor::readPArameterChanges(Vst::IParameterChanges* inputParameterC
 						if (paramQueue->getPoint (numPoints - 1, sampleOffset, value) ==
 						    kResultTrue)
 							mParam1 = value;
-							amp.setVolume(&value);
+							//amp.setVolume(&value);
+							value *= (2 * M_PI);
+							osc.setVolume(&value);
 						break;
 				}
 			}
@@ -177,8 +181,6 @@ void PlugProcessor::processEvents(Vst::IEventList* inputEvents)
 			{
 				if (event.type == Vst::Event::kNoteOnEvent)
 				{
-					//float keyMod = pow(semiToneMultiplier, event.noteOn.pitch - 69);
-					//osc.setKeyMod(keyMod);
 					keyboard.keyOn(&event.noteOn.pitch);
 				}
 				else if (event.type == Vst::Event::kNoteOffEvent)
@@ -204,6 +206,7 @@ void PlugProcessor::processAudio(Vst::AudioBusBuffers* outputs, int32 numSamples
 	for (int32 i = 0; i < numSamples; i++)
 	{
 		float value = amp.output();
+		//float value = 0;
 		for (int32 j = 0; j < outputs[0].numChannels; j++)
 		{
 			outputs[0].channelBuffers32[j][i] = value;
