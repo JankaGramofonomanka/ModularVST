@@ -50,7 +50,7 @@ void Oscillator::setSampleRate(Vst::SampleRate* _sampleRate) {
     setIncrement();
 }
 
-void Oscillator::setFrequency(float* freq) {
+void Oscillator::setFrequency(Vst::ParamValue* freq) {
     baseFreq = *freq;
     setIncrement();
 }
@@ -365,15 +365,22 @@ void FMOperator::setSampleRate(Vst::SampleRate* _sampleRate) {
     envelope.setSampleRate(_sampleRate);
 }
 
-void FMOperator::setFrequency(float* freq) { osc.setFrequency(freq); }
+void FMOperator::setFrequency(Vst::ParamValue* freq) { osc.setFrequency(freq); }
 
 void FMOperator::setKeyMod(float mod) { osc.setKeyMod(mod); }
-
-//void FMOperator::setIncrement() { osc.setIncrement(); }
 
 void FMOperator::addModulator(CVModule* mod) { mixer.addInput(mod); }
 
 void FMOperator::setVolume(Vst::ParamValue* volume) { amp.setVolume(volume); }
+
+void FMOperator::setAttack(Vst::ParamValue* _value) { envelope.setAttack(_value); }
+
+void FMOperator::setDecay(Vst::ParamValue* _value) { envelope.setDecay(_value); }
+
+void FMOperator::setSustain(Vst::ParamValue* _value) { envelope.setSustain(_value); }
+
+void FMOperator::setRelease(Vst::ParamValue* _value) { envelope.setRelease(_value); }
+
 
 LinearADSR* FMOperator::getEnvelopeAddress() { return &envelope; }
 

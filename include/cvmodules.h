@@ -75,7 +75,7 @@ public:
     virtual void setSampleRate(Vst::SampleRate* _sampleRate);
     virtual float output();
 
-    virtual void setFrequency(float* freq);
+    virtual void setFrequency(Vst::ParamValue* freq);
     virtual void setKeyMod(float mod);
 };
 
@@ -273,12 +273,15 @@ public:
     
     virtual void clear();
 
-    virtual void setFrequency(float* freq);
+    virtual void setFrequency(Vst::ParamValue* freq);
     virtual void setKeyMod(float mod);
-    //virtual void setIncrement();
 
     void addModulator(CVModule* mod);
     void setVolume(Vst::ParamValue* volume);
+    void setAttack(Vst::ParamValue* _value);
+    void setDecay(Vst::ParamValue* _value);
+    void setSustain(Vst::ParamValue* _value);
+    void setRelease(Vst::ParamValue* _value);
     LinearADSR* getEnvelopeAddress();
 };
 
