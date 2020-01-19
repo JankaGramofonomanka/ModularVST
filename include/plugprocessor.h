@@ -58,7 +58,7 @@ public:
 	tresult PLUGIN_API setActive (TBool state) SMTG_OVERRIDE;
 	tresult PLUGIN_API process (Vst::ProcessData& data) SMTG_OVERRIDE;
 
-	void readPArameterChanges(Vst::IParameterChanges* inputParameterChanges);
+	void readParameterChanges(Vst::IParameterChanges* inputParameterChanges);
 	void processEvents(Vst::IEventList* inputEvents);
 	void processAudio(Vst::AudioBusBuffers* outputs, int32 numSamples);
 
@@ -73,12 +73,9 @@ public:
 
 protected:
 	Vst::SampleRate sampleRate;
-	Vst::ParamValue mParam1 = 0;
-	int16 mParam2 = 0;
-	bool mBypass = false;
 
-	FMOperator osc;
-	FMOperator osc2;
+	FMOperator op1;
+	FMOperator op2;
 	Mixer mixer;
 	Amplifier amp;
 	//SmoothGate gate;

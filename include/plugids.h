@@ -42,8 +42,21 @@ namespace Synth {
 // HERE are defined the parameter Ids which are exported to the host
 enum SynthParams : Vst::ParamID
 {
-	kParamVolId = 102,
+	kParamOp1_levelId = 100,
+	kParamOp1_frequencyId = 101,
+	kParamOp1_attackId = 102,
+	kParamOp1_decayId = 103,
+	kParamOp1_sustainId = 104,
+	kParamOp1_releaseId = 105,
 	
+	kParamOp2_levelId = 106,
+	kParamOp2_frequencyId = 107,
+	kParamOp2_attackId = 108,
+	kParamOp2_decayId = 109,
+	kParamOp2_sustainId = 110,
+	kParamOp2_releaseId = 111,
+
+	kParamMasterVolumeId = 112,
 };
 
 

@@ -91,8 +91,8 @@ tresult PLUGIN_API PlugProcessor::setupProcessing (Vst::ProcessSetup& setup)
 	// here you get, with setup, information about:
 	// sampleRate, processMode, maximum number of samples per audio block
 	sampleRate = setup.sampleRate;
-	osc.setSampleRate(&sampleRate);
-	osc2.setSampleRate(&sampleRate);
+	op1.setSampleRate(&sampleRate);
+	op2.setSampleRate(&sampleRate);
 	//gate.setSampleRate(&sampleRate);
 	mixer.setSampleRate(&sampleRate);
 	amp.setSampleRate(&sampleRate);
@@ -108,25 +108,25 @@ tresult PLUGIN_API PlugProcessor::setActive (TBool state)
 		// Allocate Memory Here
 		// Ex: algo.create ();
 
-		keyboard.addPitchReceiver(&osc);
-		keyboard.addPitchReceiver(&osc2);
+		keyboard.addPitchReceiver(&op1);
+		keyboard.addPitchReceiver(&op2);
 		//keyboard.addGateReceiver(&gate);
-		keyboard.addGateReceiver(osc.getEnvelopeAddress());
-		keyboard.addGateReceiver(osc2.getEnvelopeAddress());
+		keyboard.addGateReceiver(op1.getEnvelopeAddress());
+		keyboard.addGateReceiver(op2.getEnvelopeAddress());
 
-		//mixer.addInput(&osc);
-		mixer.addInput(&osc2);
+		//mixer.addInput(&op1);
+		mixer.addInput(&op2);
 
 		amp.setInput(&mixer);
 		//amp.setModulator(&gate);
 
 		
-		osc2.addModulator(&osc);
+		op2.addModulator(&op1);
 	}
 	else // Release
 	{
-		osc.clear();
-		osc2.clear();
+		op1.clear();
+		op2.clear();
 		mixer.clear();
 		//gate.clear();
 		amp.clear();
@@ -139,7 +139,7 @@ tresult PLUGIN_API PlugProcessor::setActive (TBool state)
 }
 
 //-----------------------------------------------------------------------------
-void PlugProcessor::readPArameterChanges(Vst::IParameterChanges* inputParameterChanges)
+void PlugProcessor::readParameterChanges(Vst::IParameterChanges* inputParameterChanges)
 {
 	if (inputParameterChanges)
 	{
@@ -155,13 +155,80 @@ void PlugProcessor::readPArameterChanges(Vst::IParameterChanges* inputParameterC
 				int32 numPoints = paramQueue->getPointCount ();
 				switch (paramQueue->getParameterId ())
 				{
-					case SynthParams::kParamVolId:
+					case SynthParams::kParamOp1_levelId:
 						if (paramQueue->getPoint (numPoints - 1, sampleOffset, value) ==
 						    kResultTrue)
-							mParam1 = value;
-							//amp.setVolume(&value);
 							value *= (2 * M_PI);
-							osc.setVolume(&value);
+							op1.setVolume(&value);
+						break;
+					case SynthParams::kParamOp1_frequencyId:
+						if (paramQueue->getPoint (numPoints - 1, sampleOffset, value) ==
+						    kResultTrue);
+							value *= 880;
+							op1.setFrequency(&value);
+						break;
+					case SynthParams::kParamOp1_attackId:
+						if (paramQueue->getPoint (numPoints - 1, sampleOffset, value) ==
+						    kResultTrue)
+							value += 0.005;
+							op1.setAttack(&value);
+						break;
+					case SynthParams::kParamOp1_decayId:
+						if (paramQueue->getPoint (numPoints - 1, sampleOffset, value) ==
+						    kResultTrue)
+							op1.setDecay(&value);
+						break;
+					case SynthParams::kParamOp1_sustainId:
+						if (paramQueue->getPoint (numPoints - 1, sampleOffset, value) ==
+						    kResultTrue)
+							op1.setSustain(&value);
+						break;
+					case SynthParams::kParamOp1_releaseId:
+						if (paramQueue->getPoint (numPoints - 1, sampleOffset, value) ==
+						    kResultTrue)
+							value += 0.005;
+							op1.setRelease(&value);
+						break;
+
+					case SynthParams::kParamOp2_levelId:
+						if (paramQueue->getPoint (numPoints - 1, sampleOffset, value) ==
+						    kResultTrue)
+							value *= (2 * M_PI);
+							op2.setVolume(&value);
+						break;
+					case SynthParams::kParamOp2_frequencyId:
+						if (paramQueue->getPoint (numPoints - 1, sampleOffset, value) ==
+						    kResultTrue);
+							value *= 880;
+							op2.setFrequency(&value);
+						break;
+					case SynthParams::kParamOp2_attackId:
+						if (paramQueue->getPoint (numPoints - 1, sampleOffset, value) ==
+						    kResultTrue)
+							value += 0.005;
+							op2.setAttack(&value);
+						break;
+					case SynthParams::kParamOp2_decayId:
+						if (paramQueue->getPoint (numPoints - 1, sampleOffset, value) ==
+						    kResultTrue)
+							op2.setDecay(&value);
+						break;
+					case SynthParams::kParamOp2_sustainId:
+						if (paramQueue->getPoint (numPoints - 1, sampleOffset, value) ==
+						    kResultTrue)
+							op2.setSustain(&value);
+						break;
+					case SynthParams::kParamOp2_releaseId:
+						if (paramQueue->getPoint (numPoints - 1, sampleOffset, value) ==
+						    kResultTrue)
+							value += 0.005;
+							op2.setRelease(&value);
+						break;
+
+					case SynthParams::kParamMasterVolumeId:
+						if (paramQueue->getPoint (numPoints - 1, sampleOffset, value) ==
+						    kResultTrue)
+							amp.setVolume(&value);
 						break;
 				}
 			}
@@ -218,7 +285,7 @@ void PlugProcessor::processAudio(Vst::AudioBusBuffers* outputs, int32 numSamples
 tresult PLUGIN_API PlugProcessor::process (Vst::ProcessData& data)
 {
 	//--- Read inputs parameter changes-----------
-	readPArameterChanges(data.inputParameterChanges);
+	readParameterChanges(data.inputParameterChanges);
 
 	processEvents(data.inputEvents);
 	//--- Process Audio---------------------
@@ -249,12 +316,70 @@ tresult PLUGIN_API PlugProcessor::setState (IBStream* state)
 
 	IBStreamer streamer (state, kLittleEndian);
 
-	float savedParam1 = 0.f;
-	if (streamer.readFloat (savedParam1) == false)
+	//operator 1
+	float op1_level = 0.f;
+	if (streamer.readFloat (op1_level) == false)
+		return kResultFalse;
+	float op1_frequency = 0.f;
+	if (streamer.readFloat (op1_frequency) == false)
+		return kResultFalse;
+	float op1_attack = 0.f;
+	if (streamer.readFloat (op1_attack) == false)
+		return kResultFalse;
+	float op1_decay = 0.f;
+	if (streamer.readFloat (op1_decay) == false)
+		return kResultFalse;
+	float op1_sustain = 0.f;
+	if (streamer.readFloat (op1_sustain) == false)
+		return kResultFalse;
+	float op1_release = 0.f;
+	if (streamer.readFloat (op1_release) == false)
 		return kResultFalse;
 
-	mParam1 = savedParam1;
-	amp.setVolume(&mParam1);
+	//operator 2	
+	float op2_level = 0.f;
+	if (streamer.readFloat (op1_level) == false)
+		return kResultFalse;
+	float op2_frequency = 0.f;
+	if (streamer.readFloat (op1_frequency) == false)
+		return kResultFalse;
+	float op2_attack = 0.f;
+	if (streamer.readFloat (op1_attack) == false)
+		return kResultFalse;
+	float op2_decay = 0.f;
+	if (streamer.readFloat (op1_decay) == false)
+		return kResultFalse;
+	float op2_sustain = 0.f;
+	if (streamer.readFloat (op1_sustain) == false)
+		return kResultFalse;
+	float op2_release = 0.f;
+	if (streamer.readFloat (op1_release) == false)
+		return kResultFalse;
+	
+	//volume
+	float masterVolume = 0.f;
+	if (streamer.readFloat (masterVolume) == false)
+		return kResultFalse;
+
+	
+	//operator 1
+	op1.setVolume((Vst::ParamValue*) &op1_level);
+	op1.setFrequency((Vst::ParamValue*) &op1_frequency);
+	op1.setAttack((Vst::ParamValue*) &op1_attack);
+	op1.setDecay((Vst::ParamValue*) &op1_decay);
+	op1.setSustain((Vst::ParamValue*) &op1_sustain);
+	op1.setRelease((Vst::ParamValue*) &op1_release);
+	
+	//operator 2
+	op2.setVolume((Vst::ParamValue*) &op2_level);
+	op2.setFrequency((Vst::ParamValue*) &op2_frequency);
+	op2.setAttack((Vst::ParamValue*) &op2_attack);
+	op2.setDecay((Vst::ParamValue*) &op2_decay);
+	op2.setSustain((Vst::ParamValue*) &op2_sustain);
+	op2.setRelease((Vst::ParamValue*) &op2_release);
+
+	//volume
+	amp.setVolume((Vst::ParamValue*) &masterVolume);
 
 	return kResultOk;
 }
@@ -264,10 +389,49 @@ tresult PLUGIN_API PlugProcessor::getState (IBStream* state)
 {
 	// here we need to save the model (preset or project)
 
-	float toSaveParam1 = mParam1;
+	//float toSaveParam1 = mParam1;
 
 	IBStreamer streamer (state, kLittleEndian);
-	streamer.writeFloat (toSaveParam1);
+	//streamer.writeFloat (toSaveParam1);
+
+	//operator 1
+	float op1_level = 1;
+	float op1_frequency = 440;
+	float op1_attack = 0.005;
+	float op1_decay = 0;
+	float op1_sustain = 1;
+	float op1_release = 0.005;
+
+	//operator 2	
+	float op2_level = 1;
+	float op2_frequency = 440;
+	float op2_attack = 0.005;
+	float op2_decay = 0;
+	float op2_sustain = 1;
+	float op2_release = 0.005;
+	
+	//volume
+	float masterVolume = 1;
+
+	
+	//operator 1
+	streamer.writeFloat(op1_level);
+	streamer.writeFloat(op1_frequency);
+	streamer.writeFloat(op1_attack);
+	streamer.writeFloat(op1_decay);
+	streamer.writeFloat(op1_sustain);
+	streamer.writeFloat(op1_release);
+	
+	//operator 2
+	streamer.writeFloat(op2_level);
+	streamer.writeFloat(op2_frequency);
+	streamer.writeFloat(op2_attack);
+	streamer.writeFloat(op2_decay);
+	streamer.writeFloat(op2_sustain);
+	streamer.writeFloat(op2_release);
+
+	//volume
+	streamer.writeFloat(masterVolume);
 
 	return kResultOk;
 }
